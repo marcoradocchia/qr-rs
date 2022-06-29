@@ -258,7 +258,6 @@ dependencies = [
 name = "qr-rs"
 version = "0.1.0"
 dependencies = [
- "atty",
  "clap",
  "dialoguer",
  "directories",

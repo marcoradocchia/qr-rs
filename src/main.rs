@@ -22,7 +22,7 @@ use regex::Regex;
 use std::{
     fs,
     io::{self, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process,
 };
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
@@ -49,8 +49,8 @@ fn parse_hex_color(hex: &str) -> Result<String, String> {
 )]
 struct Args {
     /// Output file.
-    #[clap(short, long, default_value = "qr", value_parser)]
-    output: PathBuf,
+    #[clap(short, long, value_parser)]
+    output: Option<PathBuf>,
 
     /// Background color.
     #[clap(short, long, default_value = "#000000", value_parser = parse_hex_color)]
@@ -81,7 +81,7 @@ fn print_err(body: &str) -> io::Result<()> {
 // Returns a string of SVG code for an image depicting
 // the given QR Code, with the given number of border modules.
 // The string always uses Unix newlines (\n), regardless of the platform.
-fn gen_svg(qr: &QrCode, border: i32, bg: &str, fg: &str) -> String {
+fn gen_svg(qr: QrCode, border: i32, bg: &str, fg: &str) -> String {
     assert!(border >= 0, "Border must be non-negative");
     let mut result = String::new();
     result.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -114,19 +114,48 @@ fn gen_svg(qr: &QrCode, border: i32, bg: &str, fg: &str) -> String {
     result
 }
 
+/// Create SVG file containing the QR code.
+fn svg(qr: QrCode, output: &Path, bg: &str, fg: &str) -> io::Result<()> {
+    // Create output file.
+    let mut file = match fs::File::create(output) {
+        Ok(file) => file,
+        Err(_) => {
+            print_err("unable to create SVG file")?;
+            process::exit(1);
+        }
+    };
+
+    // Write SVG to output file.
+    if file.write_all(&gen_svg(qr, 1, fg, bg).as_bytes()).is_err() {
+        print_err("unable to write SVG file")?;
+        process::exit(1);
+    }
+
+    Ok(())
+}
+
+/// Create PNG file containing the QR code.
+fn png(qr: QrCode, output: &Path, bg: &str, fg: &str) -> io::Result<()> {
+    unimplemented!();
+}
+
+/// Print QR code to the console.
+fn console(qr: QrCode) {
+    const BORDER: i32 = 1;
+    let min = -BORDER;
+    let max = qr.size() + BORDER;
+    for y in min..max {
+        for x in min..max {
+            let c: char = if qr.get_module(x, y) { '█' } else { ' ' };
+            print!("{0}{0}", c);
+        }
+        println!();
+    }
+}
+
 fn main() -> io::Result<()> {
     // Parse CLI arguments.
     let args = Args::parse();
-
-    // Check if output exists and if so ask for overwrite.
-    if args.output.is_file() {
-        if !Confirm::with_theme(&ColorfulTheme::default())
-            .with_prompt(format!("Overwrite '{}'?", args.output.to_str().unwrap()))
-            .interact()?
-        {
-            process::exit(0);
-        }
-    }
 
     // Generate QR code.
     let qr = match QrCode::encode_text(&args.text, QrCodeEcc::Medium) {
@@ -137,23 +166,31 @@ fn main() -> io::Result<()> {
         }
     };
 
-    // Create output file.
-    let mut file = match fs::File::create(args.output) {
-        Ok(file) => file,
-        Err(_) => {
-            print_err("unable to create SVG file")?;
-            process::exit(1);
-        }
-    };
+    // Determine output type based on file extension.
+    // Use SVG as default when no extension is provided.
+    match args.output {
+        Some(output) => {
+            // Check if output file exists and if so ask for overwrite.
+            if output.is_file()
+                && !Confirm::with_theme(&ColorfulTheme::default())
+                    .with_prompt(format!("Overwrite '{}'?", output.to_str().unwrap()))
+                    .interact()?
+            {
+                process::exit(0);
+            }
 
-    // Write SVG to output file.
-    if file
-        .write_all(&gen_svg(&qr, 1, &args.fg, &args.bg).as_bytes())
-        .is_err()
-    {
-        print_err("unable to write SVG file")?;
-        process::exit(1);
-    }
+            match output.extension().map(|ext| ext.to_str().unwrap()) {
+                Some("svg") => svg(qr, &output, &args.bg, &args.fg)?,
+                Some("png") => png(qr, &output, &args.bg, &args.fg)?,
+                _ => {
+                    print_err("invalid file extension")?;
+                    process::exit(1);
+                }
+            }
+        }
+        // When no output file is specified, print QR code to stdout.
+        None => console(qr),
+    };
 
     Ok(())
 }
