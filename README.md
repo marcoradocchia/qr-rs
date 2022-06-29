@@ -1,5 +1,5 @@
 <div align="center">
-  <h1 align="center">QR-RS</h1>
+  <h1 align="center">qr-rs</h1>
 
   ![GitHub releases](https://img.shields.io/github/downloads/marcoradocchia/qr-rs/total?color=%23a9b665&logo=github)
   ![GitHub source size](https://img.shields.io/github/languages/code-size/marcoradocchia/qr-rs?color=ea6962&logo=github)
