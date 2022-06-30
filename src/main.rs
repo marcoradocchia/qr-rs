@@ -26,6 +26,7 @@ use std::{
     process,
 };
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
+use image::{ImageBuffer, RgbImage};
 
 /// Parse hex code colors.
 fn parse_hex_color(hex: &str) -> Result<String, String> {
@@ -53,11 +54,22 @@ struct Args {
     output: Option<PathBuf>,
 
     /// Background color.
-    #[clap(short, long, default_value = "#000000", value_parser = parse_hex_color)]
+    #[clap(
+        short,
+        long,
+        requires = "output",
+        default_value = "#000000",
+        value_parser = parse_hex_color
+    )]
     fg: String,
 
     /// Foreground color.
-    #[clap(short, long, default_value = "#FFFFFF", value_parser = parse_hex_color)]
+    #[clap(short,
+        long,
+        requires = "output",
+        default_value = "#FFFFFF",
+        value_parser = parse_hex_color
+    )]
     bg: String,
 
     /// Text to encode.
@@ -78,20 +90,44 @@ fn print_err(body: &str) -> io::Result<()> {
     writer.print(&buffer)
 }
 
+/// This conversion assumes the HEX string as valid color and returns corresponding RGB value.
+fn hex_to_rgb(hex: &str) -> [u8;3] {
+    let mut hex = hex.strip_prefix('#').unwrap().to_string();
+    if hex.len() == 3 {
+        let mut expanded = String::new();
+        for c in hex.chars() {
+            for _ in 0..2 {
+                expanded.push(c)
+            }
+        }
+        hex = expanded;
+    }
+
+    let mut rgb: [u8;3] = [0, 0, 0];
+    for (i, rgb_val) in rgb.iter_mut().enumerate() {
+        let (f, s) = hex[2 * i..2 * (i + 1)].split_at(1);
+        let f = u8::from_str_radix(f, 16).unwrap();
+        let s = u8::from_str_radix(s, 16).unwrap();
+        *rgb_val = f * 16 + s;
+    }
+
+    rgb
+}
+
 // Returns a string of SVG code for an image depicting
 // the given QR Code, with the given number of border modules.
 // The string always uses Unix newlines (\n), regardless of the platform.
 fn gen_svg(qr: QrCode, border: i32, bg: &str, fg: &str) -> String {
     assert!(border >= 0, "Border must be non-negative");
     let mut result = String::new();
-    result.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    result.push_str(
-        "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n"
-    );
     let dimension = qr
         .size()
         .checked_add(border.checked_mul(2).unwrap())
         .unwrap();
+    result.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    result.push_str(
+        "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n"
+    );
     result.push_str(&format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 {0} {0}\" stroke=\"none\">\n",
         dimension
@@ -100,8 +136,9 @@ fn gen_svg(qr: QrCode, border: i32, bg: &str, fg: &str) -> String {
         "\t<rect width=\"100%\" height=\"100%\" fill=\"{fg}\"/>\n"
     ));
     result.push_str("\t<path d=\"");
-    for y in 0..qr.size() {
-        for x in 0..qr.size() {
+    let size = qr.size();
+    for y in 0..size {
+        for x in 0..size {
             if qr.get_module(x, y) {
                 if x != 0 || y != 0 {
                     result.push(' ');
@@ -126,7 +163,7 @@ fn svg(qr: QrCode, output: &Path, bg: &str, fg: &str) -> io::Result<()> {
     };
 
     // Write SVG to output file.
-    if file.write_all(&gen_svg(qr, 1, fg, bg).as_bytes()).is_err() {
+    if file.write_all(gen_svg(qr, 1, fg, bg).as_bytes()).is_err() {
         print_err("unable to write SVG file")?;
         process::exit(1);
     }
@@ -136,7 +173,33 @@ fn svg(qr: QrCode, output: &Path, bg: &str, fg: &str) -> io::Result<()> {
 
 /// Create PNG file containing the QR code.
 fn png(qr: QrCode, output: &Path, bg: &str, fg: &str) -> io::Result<()> {
-    unimplemented!();
+    // Create PNG image;
+    let size = qr.size() as u32;
+    let mut img: RgbImage = ImageBuffer::new(size, size);
+
+    // Convert colors to RGB values.
+    let fg = hex_to_rgb(fg);
+    let bg = hex_to_rgb(bg);
+
+    // Generate image.
+    // TODO: needs work.
+    for y in 0..size {
+        for x in 0..size {
+            let mut pixel = img.get_pixel_mut(x, y);
+            if qr.get_module(x.try_into().unwrap(), y.try_into().unwrap()) {
+                if x != 0 || y != 0 {
+                    pixel.0 = bg;
+                    continue;
+                }
+                pixel.0 = fg;
+            }
+        }
+    }
+
+    // Save image.
+    img.save(output).unwrap();
+    
+    Ok(())
 }
 
 /// Print QR code to the console.
