@@ -34,7 +34,7 @@ pub struct Args {
     )]
     pub bg: String,
 
-    // Scale factor of raster output image format.
+    /// Scale factor of raster output image format.
     #[clap(short, long, requires = "output", value_parser)]
     pub scale: Option<u32>,
 
