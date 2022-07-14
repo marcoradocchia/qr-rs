@@ -11,11 +11,12 @@ use std::path::PathBuf;
     long_about = None
 )]
 pub struct Args {
-    /// Output file.
+    /// Output file (supported file extensions: jpeg, jpg, png, svg); omit to print QR code to
+    /// console.
     #[clap(short, long, value_parser)]
     pub output: Option<PathBuf>,
 
-    /// Background color.
+    /// Background color (hex code).
     #[clap(
         short,
         long,
@@ -25,7 +26,7 @@ pub struct Args {
     )]
     pub fg: String,
 
-    /// Foreground color.
+    /// Foreground color (hex code).
     #[clap(short,
         long,
         requires = "output",
@@ -34,11 +35,11 @@ pub struct Args {
     )]
     pub bg: String,
 
-    /// Scale factor of raster output image format.
+    /// Scale factor (raster image output only) [default: 25].
     #[clap(short, long, requires = "output", value_parser)]
     pub scale: Option<u32>,
 
-    /// Text to encode.
+    /// String to encode.
     #[clap(value_parser)]
-    pub text: String,
+    pub string: String,
 }

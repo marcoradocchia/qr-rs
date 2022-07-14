@@ -139,7 +139,7 @@ impl QrOutput for QrCode {
 /// Runs the program & catches errors.
 fn run(args: &Args) -> Result<(), ErrorKind> {
     // Generate QR code.
-    let qr = match QrCode::encode_text(&args.text, QrCodeEcc::Medium) {
+    let qr = match QrCode::encode_text(&args.string, QrCodeEcc::Medium) {
         Ok(qr) => qr,
         Err(err) => return Err(ErrorKind::Error(Error::QrCodeErr(err.to_string()))),
     };
