@@ -14,246 +14,168 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see https://www.gnu.org/licenses/.
 
-use clap::Parser;
+mod args;
+mod error;
+mod utils;
+
+use args::{Args, Parser};
 use dialoguer::{theme::ColorfulTheme, Confirm};
-use lazy_static::lazy_static;
-use qrcodegen::{QrCode, QrCodeEcc};
-use regex::Regex;
-use std::{
-    fs,
-    io::{self, Write},
-    path::{Path, PathBuf},
-    process,
-};
-use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
+use error::ErrorKind;
 use image::{ImageBuffer, RgbImage};
+use qrcodegen::{QrCode, QrCodeEcc};
+use std::{fmt::Write as _, fs, io::Write, path::Path, process};
+use utils::hex_to_rgb;
 
-/// Parse hex code colors.
-fn parse_hex_color(hex: &str) -> Result<String, String> {
-    lazy_static! {
-        static ref HEX_RE: Regex = Regex::new("^#([0-9A-Fa-f]{3}){1,2}$").unwrap();
-    }
+// Constant values.
+const BORDER: i32 = 1;
 
-    match HEX_RE.is_match(hex) {
-        true => Ok(hex.to_string()),
-        false => Err(format!("{hex} is not a valid hex color code")),
-    }
+trait QrOutput {
+    /// Create SVG file containing the QR code.
+    fn svg(&self, output: &Path, bg: &str, fg: &str) -> Result<(), ErrorKind>;
+
+    /// Create raster image (jpg|png) file containing the QR code.
+    fn rst(&self, scale: u32, output: &Path, bg: &str, fg: &str) -> Result<(), ErrorKind>;
+
+    /// Print QR code to the console.
+    fn console(&self);
 }
 
-/// Encode URLs or text into QR codes.
-#[derive(Parser, Debug)]
-#[clap(
-    author = "Marco Radocchia <marco.radocchia@outlook.com>",
-    version,
-    about,
-    long_about = None
-)]
-struct Args {
-    /// Output file.
-    #[clap(short, long, value_parser)]
-    output: Option<PathBuf>,
+impl QrOutput for QrCode {
+    /// Create SVG file containing the QR code.
+    fn svg(&self, output: &Path, bg: &str, fg: &str) -> Result<(), ErrorKind> {
+        // Create output file.
+        let mut file = match fs::File::create(output) {
+            Ok(file) => file,
+            Err(err) => return Err(ErrorKind::SvgOutputErr(err.to_string())),
+        };
 
-    /// Background color.
-    #[clap(
-        short,
-        long,
-        requires = "output",
-        default_value = "#000000",
-        value_parser = parse_hex_color
-    )]
-    fg: String,
+        // Generate a string of SVG code for an image depicting the given QR Code.
+        // The string always uses Unix newlines (\n), regardless of the platform.
 
-    /// Foreground color.
-    #[clap(short,
-        long,
-        requires = "output",
-        default_value = "#FFFFFF",
-        value_parser = parse_hex_color
-    )]
-    bg: String,
+        let mut svg_str = String::new();
+        let size = self.size();
+        let dimension = size.checked_add(BORDER * 2).unwrap();
 
-    /// Text to encode.
-    #[clap(value_parser)]
-    text: String,
-}
-
-/// Print colored error message only on Stderr stream.
-fn print_err(body: &str) -> io::Result<()> {
-    let writer = BufferWriter::stderr(ColorChoice::Auto);
-    let mut buffer = writer.buffer();
-
-    buffer.set_color(ColorSpec::new().set_fg(Some(Color::Green)).set_bold(true))?;
-    write!(&mut buffer, "error: ")?;
-    buffer.reset()?;
-    writeln!(&mut buffer, "{body}")?;
-
-    writer.print(&buffer)
-}
-
-/// This conversion assumes the HEX string as valid color and returns corresponding RGB value.
-fn hex_to_rgb(hex: &str) -> [u8;3] {
-    let mut hex = hex.strip_prefix('#').unwrap().to_string();
-    if hex.len() == 3 {
-        let mut expanded = String::new();
-        for c in hex.chars() {
-            for _ in 0..2 {
-                expanded.push(c)
-            }
-        }
-        hex = expanded;
-    }
-
-    let mut rgb: [u8;3] = [0, 0, 0];
-    for (i, rgb_val) in rgb.iter_mut().enumerate() {
-        let (f, s) = hex[2 * i..2 * (i + 1)].split_at(1);
-        let f = u8::from_str_radix(f, 16).unwrap();
-        let s = u8::from_str_radix(s, 16).unwrap();
-        *rgb_val = f * 16 + s;
-    }
-
-    rgb
-}
-
-// Returns a string of SVG code for an image depicting
-// the given QR Code, with the given number of border modules.
-// The string always uses Unix newlines (\n), regardless of the platform.
-fn gen_svg(qr: QrCode, border: i32, bg: &str, fg: &str) -> String {
-    assert!(border >= 0, "Border must be non-negative");
-    let mut result = String::new();
-    let dimension = qr
-        .size()
-        .checked_add(border.checked_mul(2).unwrap())
+        writeln!(svg_str, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>").unwrap();
+        writeln!(svg_str, "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">").unwrap();
+        writeln!(svg_str, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 {dimension} {dimension}\" stroke=\"none\">").unwrap();
+        writeln!(
+            svg_str,
+            "\t<rect width=\"100%\" height=\"100%\" fill=\"{fg}\"/>"
+        )
         .unwrap();
-    result.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    result.push_str(
-        "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n"
-    );
-    result.push_str(&format!(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 {0} {0}\" stroke=\"none\">\n",
-        dimension
-    ));
-    result.push_str(&format!(
-        "\t<rect width=\"100%\" height=\"100%\" fill=\"{fg}\"/>\n"
-    ));
-    result.push_str("\t<path d=\"");
-    let size = qr.size();
-    for y in 0..size {
-        for x in 0..size {
-            if qr.get_module(x, y) {
-                if x != 0 || y != 0 {
-                    result.push(' ');
+        writeln!(svg_str, "\t<path d=\"").unwrap();
+
+        for y in 0..size {
+            for x in 0..size {
+                if self.get_module(x, y) {
+                    if x != 0 || y != 0 {
+                        write!(svg_str, " ").unwrap();
+                    }
+                    write!(svg_str, "M{},{}h1v1h-1z", x + BORDER, y + BORDER).unwrap();
                 }
-                result.push_str(&format!("M{},{}h1v1h-1z", x + border, y + border));
             }
         }
-    }
-    result.push_str(&format!("\" fill=\"{bg}\"/>\n</svg>\n"));
-    result
-}
+        writeln!(svg_str, "\" fill=\"{bg}\"/>\n</svg>").unwrap();
 
-/// Create SVG file containing the QR code.
-fn svg(qr: QrCode, output: &Path, bg: &str, fg: &str) -> io::Result<()> {
-    // Create output file.
-    let mut file = match fs::File::create(output) {
-        Ok(file) => file,
-        Err(_) => {
-            print_err("unable to create SVG file")?;
-            process::exit(1);
+        // Write SVG to output file.
+        if let Err(err) = file.write_all(svg_str.as_bytes()) {
+            return Err(ErrorKind::SvgOutputErr(err.to_string()));
         }
-    };
 
-    // Write SVG to output file.
-    if file.write_all(gen_svg(qr, 1, fg, bg).as_bytes()).is_err() {
-        print_err("unable to write SVG file")?;
-        process::exit(1);
+        Ok(())
     }
 
-    Ok(())
-}
+    /// Create raster image (jpg|png) file containing the QR code.
+    fn rst(&self, scale: u32, output: &Path, bg: &str, fg: &str) -> Result<(), ErrorKind> {
+        // Convert colors to RGB values.
+        let fg = hex_to_rgb(fg);
+        let bg = hex_to_rgb(bg);
 
-/// Create PNG file containing the QR code.
-fn png(qr: QrCode, output: &Path, bg: &str, fg: &str) -> io::Result<()> {
-    // Create PNG image;
-    let size = qr.size() as u32;
-    let mut img: RgbImage = ImageBuffer::new(size, size);
+        let scaled_border = scale as i32 * BORDER;
+        // Size of the image including the borders.
+        let img_size = self.size() * scale as i32 + (2 * scaled_border);
 
-    // Convert colors to RGB values.
-    let fg = hex_to_rgb(fg);
-    let bg = hex_to_rgb(bg);
+        // Create image: image needs border on each side of the square.
+        let mut img: RgbImage = ImageBuffer::new(img_size as u32, img_size as u32);
 
-    // Generate image.
-    // TODO: needs work.
-    for y in 0..size {
-        for x in 0..size {
-            let mut pixel = img.get_pixel_mut(x, y);
-            if qr.get_module(x.try_into().unwrap(), y.try_into().unwrap()) {
-                if x != 0 || y != 0 {
+        // Write image pixels.
+        for y in 0..img_size {
+            for x in 0..img_size {
+                let mut pixel = img.get_pixel_mut(x as u32, y as u32);
+
+                if x <= scaled_border || y <= scaled_border {
                     pixel.0 = bg;
                     continue;
                 }
-                pixel.0 = fg;
+
+                let x = (x - scaled_border) / scale as i32;
+                let y = (y - scaled_border) / scale as i32;
+                pixel.0 = if self.get_module(x, y) { fg } else { bg };
             }
         }
-    }
 
-    // Save image.
-    img.save(output).unwrap();
-    
-    Ok(())
-}
-
-/// Print QR code to the console.
-fn console(qr: QrCode) {
-    const BORDER: i32 = 1;
-    let min = -BORDER;
-    let max = qr.size() + BORDER;
-    for y in min..max {
-        for x in min..max {
-            let c: char = if qr.get_module(x, y) { '█' } else { ' ' };
-            print!("{0}{0}", c);
+        // Save image.
+        if img.save(output).is_err() {
+            return Err(ErrorKind::RasterOutputErr);
         }
-        println!();
+
+        Ok(())
+    }
+
+    fn console(&self) {
+        for y in -BORDER..self.size() + BORDER {
+            for x in -BORDER..self.size() + BORDER {
+                let c: char = if self.get_module(x, y) { '█' } else { ' ' };
+                print!("{0}{0}", c);
+            }
+            println!();
+        }
     }
 }
 
-fn main() -> io::Result<()> {
-    // Parse CLI arguments.
-    let args = Args::parse();
-
+/// Runs the program & catches errors.
+fn run(args: &Args) -> Result<(), ErrorKind> {
     // Generate QR code.
     let qr = match QrCode::encode_text(&args.text, QrCodeEcc::Medium) {
         Ok(qr) => qr,
-        Err(_) => {
-            print_err("unable to generate QR code")?;
-            process::exit(1);
-        }
+        Err(err) => return Err(ErrorKind::QrCodeErr(err.to_string())),
     };
 
     // Determine output type based on file extension.
     // Use SVG as default when no extension is provided.
-    match args.output {
+    match &args.output {
         Some(output) => {
             // Check if output file exists and if so ask for overwrite.
             if output.is_file()
                 && !Confirm::with_theme(&ColorfulTheme::default())
-                    .with_prompt(format!("Overwrite '{}'?", output.to_str().unwrap()))
-                    .interact()?
+                    .with_prompt(format!("Overwrite {:?}?", output))
+                    .interact()
+                    .expect("dialog interaction failed")
             {
-                process::exit(0);
+                return Ok(());
             }
 
             match output.extension().map(|ext| ext.to_str().unwrap()) {
-                Some("svg") => svg(qr, &output, &args.bg, &args.fg)?,
-                Some("png") => png(qr, &output, &args.bg, &args.fg)?,
-                _ => {
-                    print_err("invalid file extension")?;
-                    process::exit(1);
-                }
+                Some("svg") => qr.svg(output, &args.bg, &args.fg)?,
+                Some("png" | "jpg") => qr.rst(25, output, &args.bg, &args.fg)?,
+                _ => return Err(ErrorKind::InvalidOutputExt),
             }
         }
         // When no output file is specified, print QR code to stdout.
-        None => console(qr),
+        None => qr.console(),
     };
 
     Ok(())
+}
+
+/// Main function: calls run function and prints errors.
+fn main() {
+    // Parse CLI arguments.
+    let args = Args::parse();
+
+    if let Err(e) = run(&args) {
+        e.colorize().unwrap();
+        process::exit(1);
+    }
 }
