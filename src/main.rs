@@ -56,16 +56,16 @@ impl QrOutput for QrCode {
         let size = self.size();
         let dimension = size.checked_add(BORDER * 2).unwrap();
 
-        writeln!(svg_str, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>").unwrap();
-        writeln!(svg_str, "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">").unwrap();
-        writeln!(svg_str, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 {dimension} {dimension}\" stroke=\"none\">").unwrap();
         writeln!(
             svg_str,
-            "\t<rect width=\"100%\" height=\"100%\" fill=\"{fg}\"/>"
-        )
-        .unwrap();
-        writeln!(svg_str, "\t<path d=\"").unwrap();
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+                <!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \
+                \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\
+                <svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" \
+                viewBox=\"0 0 {dimension} {dimension}\" stroke=\"none\">\
+                \t<rect width=\"100%\" height=\"100%\" fill=\"{fg}\"/>\t<path d=\"").unwrap();
 
+        // Write actual QR code information.
         for y in 0..size {
             for x in 0..size {
                 if self.get_module(x, y) {
@@ -76,6 +76,7 @@ impl QrOutput for QrCode {
                 }
             }
         }
+
         writeln!(svg_str, "\" fill=\"{bg}\"/>\n</svg>").unwrap();
 
         // Write SVG to output file.
