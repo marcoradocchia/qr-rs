@@ -6,8 +6,8 @@
   ![GitHub open issues](https://img.shields.io/github/issues-raw/marcoradocchia/qr-rs?color=%23d8a657&logo=github)
   ![GitHub open pull requests](https://img.shields.io/github/issues-pr-raw/marcoradocchia/qr-rs?color=%2389b482&logo=github)
   ![GitHub sponsors](https://img.shields.io/github/sponsors/marcoradocchia?color=%23d3869b&logo=github)
-  <!-- ![Crates.io downloads](https://img.shields.io/crates/d/qr-rs?label=crates.io%20downloads&logo=rust) -->
-  <!-- ![Crates.io version](https://img.shields.io/crates/v/qr-rs?logo=rust&color=%23d8a657) -->
+  ![Crates.io downloads](https://img.shields.io/crates/d/qr-rs?label=crates.io%20downloads&logo=rust)
+  ![Crates.io version](https://img.shields.io/crates/v/qr-rs?logo=rust&color=%23d8a657)
   ![GitHub license](https://img.shields.io/github/license/marcoradocchia/qr-rs?color=%23e78a4e)
 </div>
 
@@ -18,7 +18,7 @@ codes in various file formats and colors.
 
 - [Install](#install)
   * [Master branch](#master-branch)
-  * [Latest release from crates.io](#latest-release-from-crates.io)
+  * [Latest release](#latest-release)
 - [Uninstall](#uninstall)
 - [Usage](#usage)
 - [Changelog](#changelog)
@@ -26,10 +26,10 @@ codes in various file formats and colors.
 
 ## Install
 
-The following installation instructions assume a **Rust toolchain** (`rustc >=1.62.0`) installed
-on the system. In order to install such toolchain you can use `rusutp`: see
-https://www.rust-lang.org/tools/install for further installation
-instructions and notes.
+The following installation instructions assume a **Rust toolchain** (`rustc
+>=1.62.0`) installed on the system. In order to install such toolchain you can
+>use `rusutp`: see https://www.rust-lang.org/tools/install for further
+>installation instructions and notes.
 
 ### Master branch
 
@@ -38,7 +38,7 @@ To build and install from master branch run:
 cargo install --git https://github.com/marcoradocchia/qr-rs --branch master
 ```
 
-### Latest release from crates.io
+### Latest release
 
 To build and install the latest release from
 [crates.io](https://crates.io/crates/qr-rs) run:
