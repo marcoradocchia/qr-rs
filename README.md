@@ -9,6 +9,8 @@
   ![Crates.io downloads](https://img.shields.io/crates/d/qr-rs?label=crates.io%20downloads&logo=rust)
   ![Crates.io version](https://img.shields.io/crates/v/qr-rs?logo=rust&color=%23d8a657)
   ![GitHub license](https://img.shields.io/github/license/marcoradocchia/qr-rs?color=%23e78a4e)
+
+  ![colored_qr](assets/colored_qr.png)
 </div>
 
 Command Line Interface utility to encode URLs or more generally text into QR
