@@ -1,3 +1,4 @@
+use atty;
 use std::{
     fmt::{self, Display, Formatter},
     io::{self, Write},
@@ -21,7 +22,12 @@ pub enum ErrorKind {
 impl ErrorKind {
     /// Colorize error output.
     pub fn colorize(&self) -> io::Result<()> {
-        let writer = BufferWriter::stderr(ColorChoice::Auto);
+        let color_choice = match atty::is(atty::Stream::Stderr) {
+            true => ColorChoice::Auto,
+            false => ColorChoice::Never,
+        };
+
+        let writer = BufferWriter::stderr(color_choice);
         let mut buffer = writer.buffer();
 
         buffer.set_color(ColorSpec::new().set_fg(Some(Color::Red)).set_bold(true))?;
