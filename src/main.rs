@@ -20,7 +20,7 @@ mod utils;
 
 use args::{Args, Parser};
 use dialoguer::{theme::ColorfulTheme, Confirm};
-use error::ErrorKind;
+use error::{Error, ErrorKind, Warning};
 use image::{ImageBuffer, RgbImage};
 use qrcodegen::{QrCode, QrCodeEcc};
 use std::{fmt::Write as _, fs, io::Write, path::Path, process};
@@ -33,7 +33,7 @@ trait QrOutput {
     /// Create SVG file containing the QR code.
     fn svg(&self, output: &Path, bg: &str, fg: &str) -> Result<(), ErrorKind>;
 
-    /// Create raster image (jpg|png) file containing the QR code.
+    /// Create raster image (png|jpg|jpeg) file containing the QR code.
     fn rst(&self, scale: u32, output: &Path, bg: &str, fg: &str) -> Result<(), ErrorKind>;
 
     /// Print QR code to the console.
@@ -46,7 +46,7 @@ impl QrOutput for QrCode {
         // Create output file.
         let mut file = match fs::File::create(output) {
             Ok(file) => file,
-            Err(err) => return Err(ErrorKind::SvgOutputErr(err.to_string())),
+            Err(err) => return Err(ErrorKind::Error(Error::SvgOutputErr(err.to_string()))),
         };
 
         // Generate a string of SVG code for an image depicting the given QR Code.
@@ -63,7 +63,9 @@ impl QrOutput for QrCode {
                 \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\
                 <svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" \
                 viewBox=\"0 0 {dimension} {dimension}\" stroke=\"none\">\
-                \t<rect width=\"100%\" height=\"100%\" fill=\"{fg}\"/>\t<path d=\"").unwrap();
+                \t<rect width=\"100%\" height=\"100%\" fill=\"{bg}\"/>\t<path d=\""
+        )
+        .unwrap();
 
         // Write actual QR code information.
         for y in 0..size {
@@ -77,17 +79,17 @@ impl QrOutput for QrCode {
             }
         }
 
-        writeln!(svg_str, "\" fill=\"{bg}\"/>\n</svg>").unwrap();
+        writeln!(svg_str, "\" fill=\"{fg}\"/>\n</svg>").unwrap();
 
         // Write SVG to output file.
         if let Err(err) = file.write_all(svg_str.as_bytes()) {
-            return Err(ErrorKind::SvgOutputErr(err.to_string()));
+            return Err(ErrorKind::Error(Error::SvgOutputErr(err.to_string())));
         }
 
         Ok(())
     }
 
-    /// Create raster image (jpg|png) file containing the QR code.
+    /// Create raster image (png|jpg|jpeg) file containing the QR code.
     fn rst(&self, scale: u32, output: &Path, bg: &str, fg: &str) -> Result<(), ErrorKind> {
         // Convert colors to RGB values.
         let fg = hex_to_rgb(fg);
@@ -117,8 +119,8 @@ impl QrOutput for QrCode {
         }
 
         // Save image.
-        if img.save(output).is_err() {
-            return Err(ErrorKind::RasterOutputErr);
+        if let Err(err) = img.save(output) {
+            return Err(ErrorKind::Error(Error::RasterOutputErr(err.to_string())));
         }
 
         Ok(())
@@ -127,8 +129,7 @@ impl QrOutput for QrCode {
     fn console(&self) {
         for y in -BORDER..self.size() + BORDER {
             for x in -BORDER..self.size() + BORDER {
-                let c: char = if self.get_module(x, y) { '█' } else { ' ' };
-                print!("{0}{0}", c);
+                print!("{0}{0}", if self.get_module(x, y) { '█' } else { ' ' });
             }
             println!();
         }
@@ -140,7 +141,7 @@ fn run(args: &Args) -> Result<(), ErrorKind> {
     // Generate QR code.
     let qr = match QrCode::encode_text(&args.text, QrCodeEcc::Medium) {
         Ok(qr) => qr,
-        Err(err) => return Err(ErrorKind::QrCodeErr(err.to_string())),
+        Err(err) => return Err(ErrorKind::Error(Error::QrCodeErr(err.to_string()))),
     };
 
     // Determine output type based on file extension.
@@ -158,9 +159,18 @@ fn run(args: &Args) -> Result<(), ErrorKind> {
             }
 
             match output.extension().map(|ext| ext.to_str().unwrap()) {
-                Some("svg") => qr.svg(output, &args.bg, &args.fg)?,
-                Some("png" | "jpg") => qr.rst(25, output, &args.bg, &args.fg)?,
-                _ => return Err(ErrorKind::InvalidOutputExt),
+                Some("svg") => {
+                    qr.svg(output, &args.bg, &args.fg)?;
+                    // If scale CLI option was provided with non-raster image output format, warn
+                    // the user.
+                    if args.scale.is_some() {
+                        return Err(ErrorKind::Warning(Warning::UnexpectedScaleOpt));
+                    }
+                }
+                Some("png" | "jpg" | "jpeg") => {
+                    qr.rst(args.scale.unwrap_or(25), output, &args.bg, &args.fg)?
+                }
+                _ => return Err(ErrorKind::Error(Error::InvalidOutputExt)),
             }
         }
         // When no output file is specified, print QR code to stdout.
