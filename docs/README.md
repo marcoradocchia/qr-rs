@@ -19,8 +19,10 @@ codes in various file formats and colors.
 ## Index
 
 - [Install](#install)
-  * [Master branch](#master-branch)
-  * [Latest release](#latest-release)
+  * [Cargo](cargo)
+    - [Master branch](#master-branch)
+    - [Latest release](#latest-release)
+  * [AUR](aur)
 - [Uninstall](#uninstall)
 - [Usage](#usage)
 - [Changelog](#changelog)
@@ -33,20 +35,43 @@ on the system. In order to install such toolchain you can use `rusutp`: see
 https://www.rust-lang.org/tools/install for further installation
 instructions and notes.
 
-### Master branch
+### Cargo
+
+In order to install using Rusts' package manager `cargo` follow instructions
+below.
+
+#### Master branch
 
 To build and install from master branch run:
 ```sh
 cargo install --git https://github.com/marcoradocchia/qr-rs --branch master
 ```
 
-### Latest release
+#### Latest release
 
 To build and install the latest release from
 [crates.io](https://crates.io/crates/qr-rs) run:
 ```
 cargo install qr-rs
 ```
+
+### AUR
+
+For **Arch Linux** (and other Arch based distros) a binary package[^1] is
+available in the **AUR** (**A**rch **U**ser **R**epository):
+
+- [qr-rs-bin](https://aur.archlinux.org/packages/qr-rs-bin)
+
+You can install it using an _AUR helper_ such as `yay`:
+```sh
+yay -S qr-rs-bin
+```
+or `paru`:
+```
+paru -S qr-rs-bin
+```
+
+[^1]: Currently only `x86_64`
 
 ## Uninstall
 
