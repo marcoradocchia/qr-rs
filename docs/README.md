@@ -19,10 +19,10 @@ codes in various file formats and colors.
 ## Index
 
 - [Install](#install)
-  * [Cargo](cargo)
+  * [Cargo](#cargo)
     - [Master branch](#master-branch)
     - [Latest release](#latest-release)
-  * [AUR](aur)
+  * [AUR](#aur)
 - [Uninstall](#uninstall)
 - [Usage](#usage)
 - [Changelog](#changelog)
