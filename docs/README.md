@@ -23,7 +23,6 @@ codes in various file formats and colors.
     - [Master branch](#master-branch)
     - [Latest release](#latest-release)
   * [AUR](#aur)
-- [Uninstall](#uninstall)
 - [Usage](#usage)
 - [Changelog](#changelog)
 - [License](#license)
@@ -72,13 +71,6 @@ paru -S qr-rs-bin
 ```
 
 [^1]: Currently only `x86_64`
-
-## Uninstall
-
-To uninstall run:
-```
-cargo uninstall qr-rs
-```
 
 ## Usage
 ```
