@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use qrcodegen::QrCodeEcc;
 use regex::Regex;
 
 /// Parse hex code colors.
@@ -11,6 +12,17 @@ pub fn parse_hex_color(hex: &str) -> Result<String, String> {
         true => Ok(hex.to_string()),
         false => Err(format!("{hex} is not a valid hex color code")),
     }
+}
+
+/// Parse QR error correction level (assumes ecl being one of ["low", "medium", "quartile", "high"]).
+pub fn parse_error_correction_level(ecl: &str) -> Result<QrCodeEcc, String> {
+    Ok(match ecl {
+        "low" => QrCodeEcc::Low,
+        "medium" => QrCodeEcc::Medium,
+        "quartile" => QrCodeEcc::Quartile,
+        "high" => QrCodeEcc::High,
+        _ => return Err("invalid error correction level".to_string()),
+    })
 }
 
 /// This conversion assumes the HEX string as valid color and returns corresponding RGB value.

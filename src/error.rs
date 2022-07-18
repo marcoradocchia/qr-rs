@@ -67,11 +67,11 @@ impl Display for ErrorKind {
                 ),
             },
             Self::Error(error) => match error {
-                Error::QrCodeErr(msg) => write!(f, "unable to generate QR code `{msg}`"),
+                Error::QrCodeErr(msg) => write!(f, "unable to generate QR code: {msg}"),
                 Error::InvalidOutputExt => write!(f, "invalid output file extension"),
-                Error::SvgOutputErr(msg) => write!(f, "unable to write SVG output file `{msg}`"),
+                Error::SvgOutputErr(msg) => write!(f, "unable to write SVG output file: {msg}"),
                 Error::RasterOutputErr(msg) => {
-                    write!(f, "unable to write raster image file `{msg}`")
+                    write!(f, "unable to write raster image file: {msg}")
                 }
             },
         }
