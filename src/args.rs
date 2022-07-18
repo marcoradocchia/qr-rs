@@ -14,10 +14,34 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see https://www.gnu.org/licenses/.
 
-use crate::utils::{parse_error_correction_level, parse_hex_color};
 pub use clap::Parser;
+use lazy_static::lazy_static;
 use qrcodegen::QrCodeEcc;
+use regex::Regex;
 use std::path::PathBuf;
+
+/// Parse hex code colors.
+pub fn parse_hex_color(hex: &str) -> Result<String, String> {
+    lazy_static! {
+        static ref HEX_RE: Regex = Regex::new("^#([0-9A-Fa-f]{3}){1,2}$").unwrap();
+    }
+
+    match HEX_RE.is_match(hex) {
+        true => Ok(hex.to_string()),
+        false => Err(format!("{hex} is not a valid hex color code")),
+    }
+}
+
+/// Parse QR error correction level (assumes ecl being one of ["low", "medium", "quartile", "high"]).
+pub fn parse_error_correction_level(ecl: &str) -> Result<QrCodeEcc, String> {
+    Ok(match ecl {
+        "low" => QrCodeEcc::Low,
+        "medium" => QrCodeEcc::Medium,
+        "quartile" => QrCodeEcc::Quartile,
+        "high" => QrCodeEcc::High,
+        _ => return Err("invalid error correction level".to_string()),
+    })
+}
 
 /// A CLI utility to encode URLs or text into QR codes in various formats and colors.
 #[derive(Parser, Debug)]
