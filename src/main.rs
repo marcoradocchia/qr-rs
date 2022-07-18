@@ -26,7 +26,12 @@ use qrcodegen::QrCode;
 use std::{fmt::Write as _, fs, io::Write, path::Path, process};
 use utils::hex_to_rgb;
 
-// A Qr code TODO
+/// QR code.
+///
+/// # Fields
+///
+/// - data: `QrCode` instance containing QR code data information
+/// - border: output border size expressed in unit blocks
 struct Qr {
     data: QrCode,
     border: i32,
