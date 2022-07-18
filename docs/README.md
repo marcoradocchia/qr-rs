@@ -73,25 +73,44 @@ paru -S qr-rs-bin
 [^1]: Currently only `x86_64`
 
 ## Usage
+
 ```
-qr-rs 0.1.0
+qr-rs 0.2.0
 Marco Radocchia <marco.radocchia@outlook.com>
-Encode URLs or text into QR codes.
+A CLI utility to encode URLs or text into QR codes in various formats and colors.
 
 USAGE:
-    qr [OPTIONS] <STRING>
+    qr [OPTIONS] [STRING]
 
 ARGS:
     <STRING>    String to encode
 
 OPTIONS:
-    -b, --bg <BG>            Foreground color (hex code) [default: #FFF]
-    -f, --fg <FG>            Background color (hex code) [default: #000]
-    -h, --help               Print help information
-    -o, --output <OUTPUT>    Output file (supported file extensions: jpeg, jpg, png, svg); omit to
-                             print QR code to console
-    -s, --scale <SCALE>      Scale factor (raster image output only) [default: 25]
-    -V, --version            Print version information
+    -b, --bg <BG>
+            Foreground color (hex code) [default: #FFF]
+
+    -B, --border <BORDER>
+            Border size (expressed in unit blocks) [default: 1]
+
+        --error-correction-level <ERROR_CORRECTION_LEVEL>
+            QR error orrection level [default: medium] [possible values: low, medium, quartile,
+            high]
+
+    -f, --fg <FG>
+            Background color (hex code) [default: #000]
+
+    -h, --help
+            Print help information
+
+    -o, --output <OUTPUT>
+            Output file (supported file extensions: jpeg, jpg, png, svg); omit to print QR code to
+            console
+
+    -s, --scale <SCALE>
+            Scale factor (raster image output only) [default: 25]
+
+    -V, --version
+            Print version information
 ```
 
 ## Changelog
