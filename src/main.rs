@@ -23,7 +23,13 @@ use dialoguer::{theme::ColorfulTheme, Confirm};
 use error::{Error, ErrorKind, Warning};
 use image::{ImageBuffer, RgbImage};
 use qrcodegen::QrCode;
-use std::{fmt::Write as _, fs, io::Write, path::Path, process};
+use std::{
+    fmt::Write as _,
+    fs,
+    io::{self, Read, Write},
+    path::Path,
+    process,
+};
 use utils::hex_to_rgb;
 
 /// QR code.
@@ -42,7 +48,7 @@ impl Qr {
     fn new(data: QrCode, border: u8) -> Self {
         Self {
             data,
-            border: border.into()
+            border: border.into(),
         }
     }
 }
@@ -144,10 +150,18 @@ impl QrOutput for Qr {
         Ok(())
     }
 
+    /// Print QR code to standard output.
     fn console(&self) {
         for y in -self.border..self.data.size() + self.border {
             for x in -self.border..self.data.size() + self.border {
-                print!("{0}{0}", if self.data.get_module(x, y) { '█' } else { ' ' });
+                print!(
+                    "{0}{0}",
+                    if self.data.get_module(x, y) {
+                        '█'
+                    } else {
+                        ' '
+                    }
+                );
             }
             println!();
         }
@@ -155,9 +169,26 @@ impl QrOutput for Qr {
 }
 
 /// Runs the program & catches errors.
-fn run(args: &Args) -> Result<(), ErrorKind> {
+fn run(args: Args) -> Result<(), ErrorKind> {
+    // If string to encode is not passed in as CLI argument, check stdin for piped string.
+    let string = args.string.unwrap_or_else(|| {
+        if atty::is(atty::Stream::Stdin) {
+            clap::Command::new("qr [OPTIONS] [STRING]")
+                .error(
+                    clap::ErrorKind::MissingRequiredArgument,
+                    "Missing input string.\n\n\
+                        \tEither provide it as a CLI argument or pipe it in from standard input.",
+                )
+                .exit();
+        } else {
+            let mut string = String::new();
+            io::stdin().lock().read_to_string(&mut string).unwrap();
+            string.trim_end().to_string()
+        }
+    });
+
     // Generate QR code.
-    let qr = match QrCode::encode_text(&args.string, args.error_correction_level) {
+    let qr = match QrCode::encode_text(&string, args.error_correction_level) {
         Ok(data) => Qr::new(data, args.border),
         Err(err) => return Err(ErrorKind::Error(Error::QrCodeErr(err.to_string()))),
     };
@@ -200,7 +231,7 @@ fn run(args: &Args) -> Result<(), ErrorKind> {
 
 /// Main function: calls run function and prints errors.
 fn main() {
-    if let Err(e) = run(&Args::parse()) {
+    if let Err(e) = run(Args::parse()) {
         e.colorize().unwrap();
         process::exit(1);
     }

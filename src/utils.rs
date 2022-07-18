@@ -41,7 +41,11 @@ pub fn parse_error_correction_level(ecl: &str) -> Result<QrCodeEcc, String> {
     })
 }
 
-/// This conversion assumes the HEX string as valid color and returns corresponding RGB value.
+/// Convert HEX color code to RGB values
+///
+/// # Note
+///
+/// This function assumes `hex` parameter being a valid HEX color code.
 pub fn hex_to_rgb(hex: &str) -> [u8; 3] {
     let mut hex = hex.strip_prefix('#').unwrap().to_string();
     if hex.len() == 3 {

@@ -19,7 +19,7 @@ pub use clap::Parser;
 use qrcodegen::QrCodeEcc;
 use std::path::PathBuf;
 
-/// Encode URLs or text into QR codes.
+/// A CLI utility to encode URLs or text into QR codes in various formats and colors.
 #[derive(Parser, Debug)]
 #[clap(
     author = "Marco Radocchia <marco.radocchia@outlook.com>",
@@ -72,5 +72,5 @@ pub struct Args {
 
     /// String to encode.
     #[clap(value_parser)]
-    pub string: String,
+    pub string: Option<String>,
 }
