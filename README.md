@@ -12,6 +12,10 @@
 
   ![colored_qr](assets/colored_qr.png)
 </div>
+  
+<a href="https://repology.org/project/qr-rs/versions">
+  <img src="https://repology.org/badge/vertical-allrepos/qr-rs.svg" alt="Packaging status" align="right">
+</a>
 
 Command Line Interface utility to encode URLs or more generally text into QR
 codes in various file formats and colors.
