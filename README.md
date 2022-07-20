@@ -40,7 +40,7 @@ instructions and notes.
 
 ### Cargo
 
-In order to install using Rusts' package manager `cargo` follow instructions
+In order to install using Rust's package manager `cargo` follow instructions
 below.
 
 #### Master branch
