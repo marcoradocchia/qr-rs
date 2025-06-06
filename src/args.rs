@@ -14,13 +14,28 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see https://www.gnu.org/licenses/.
 
-pub use clap::Parser;
+use clap::builder::{PossibleValuesParser, TypedValueParser};
+use clap::Parser;
 use lazy_static::lazy_static;
 use qrcodegen::QrCodeEcc;
 use regex::Regex;
 use std::path::PathBuf;
 
+const HELP_TEMPLATE: &'static str = "{name} v{version} by {author}
+
+{about}
+{usage-heading} {usage}
+
+{all-args}
+";
+
+const ECC_VALUES: &'static [&'static str] = &["low", "medium", "quartile", "high"];
+
 /// Parse hex code colors.
+///
+/// # Errors
+///
+/// Returns an error if an invalid hex color code was provided.
 pub fn parse_hex_color(hex: &str) -> Result<String, String> {
     lazy_static! {
         static ref HEX_RE: Regex = Regex::new("^#([0-9A-Fa-f]{3}){1,2}$").unwrap();
@@ -33,32 +48,37 @@ pub fn parse_hex_color(hex: &str) -> Result<String, String> {
 }
 
 /// Parse QR error correction level (assumes ecl being one of ["low", "medium", "quartile", "high"]).
-pub fn parse_error_correction_level(ecl: &str) -> Result<QrCodeEcc, String> {
-    Ok(match ecl {
+pub fn parse_error_correction_level(ecl: String) -> QrCodeEcc {
+    match ecl.as_str() {
         "low" => QrCodeEcc::Low,
         "medium" => QrCodeEcc::Medium,
         "quartile" => QrCodeEcc::Quartile,
         "high" => QrCodeEcc::High,
-        _ => return Err("invalid error correction level".to_string()),
-    })
+        _ => unreachable!(),
+    }
 }
 
 /// A CLI utility to encode URLs or text into QR codes in various formats and colors.
-#[derive(Parser, Debug)]
-#[clap(
-    author = "Marco Radocchia <marco.radocchia@outlook.com>",
+#[derive(Debug, Parser)]
+#[command(
+    author,
     version,
     about,
-    long_about = None
+    long_about = None,
+    help_template = HELP_TEMPLATE,
 )]
 pub struct Args {
     /// Output file (supported file extensions: jpeg, jpg, png, svg); omit to print QR code to
     /// console.
-    #[clap(short, long, value_parser)]
+    #[arg(short, long, value_parser)]
     pub output: Option<PathBuf>,
 
+    /// Force output, i.e. overwrite without user confirmation.
+    #[arg(short = 'F', long, requires = "output")]
+    pub force: bool,
+
     /// Background color (hex code).
-    #[clap(
+    #[arg(
         short,
         long,
         requires = "output",
@@ -68,7 +88,7 @@ pub struct Args {
     pub fg: String,
 
     /// Foreground color (hex code).
-    #[clap(
+    #[arg(
         short,
         long,
         requires = "output",
@@ -78,23 +98,23 @@ pub struct Args {
     pub bg: String,
 
     /// Border size (expressed in unit blocks).
-    #[clap(short = 'B', long, default_value_t = 1, value_parser)]
+    #[arg(short = 'B', long, default_value_t = 1, value_parser)]
     pub border: u8,
 
     /// QR error orrection level.
-    #[clap(
+    #[arg(
+        short = 'l',
         long,
         default_value = "medium",
-        possible_values = ["low", "medium", "quartile", "high"],
-        value_parser = parse_error_correction_level
+        value_parser = PossibleValuesParser::new(ECC_VALUES).map(parse_error_correction_level),
     )]
     pub error_correction_level: QrCodeEcc,
 
     /// Scale factor (raster image output only) [default: 25].
-    #[clap(short, long, requires = "output", value_parser)]
+    #[arg(short, long, requires = "output", value_parser)]
     pub scale: Option<u8>,
 
     /// String to encode.
-    #[clap(value_parser)]
+    #[arg(value_parser)]
     pub string: Option<String>,
 }

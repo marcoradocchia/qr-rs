@@ -25,7 +25,7 @@ pub fn hex_to_rgb(hex: &str) -> [u8; 3] {
         let mut expanded = String::new();
         for c in hex.chars() {
             for _ in 0..2 {
-                expanded.push(c)
+                expanded.push(c);
             }
         }
         hex = expanded;

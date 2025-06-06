@@ -33,7 +33,7 @@ codes in various file formats and colors.
 
 ## Install
 
-The following installation instructions assume a **Rust toolchain** (`rustc >=1.62.0`) installed
+The following installation instructions assume a **Rust toolchain** (`rustc >=1.70.0`) installed
 on the system. In order to install such toolchain you can use `rusutp`: see
 https://www.rust-lang.org/tools/install for further installation
 instructions and notes.
@@ -70,7 +70,7 @@ You can install it using an _AUR helper_ such as `yay`:
 yay -S qr-rs-bin
 ```
 or `paru`:
-```
+```sh
 paru -S qr-rs-bin
 ```
 
@@ -79,42 +79,33 @@ paru -S qr-rs-bin
 ## Usage
 
 ```
-qr-rs 0.2.0
-Marco Radocchia <marco.radocchia@outlook.com>
+qr-rs v0.3.0 by Marco Radocchia <mar.radocchia@proton.me>
+
 A CLI utility to encode URLs or text into QR codes in various formats and colors.
+Usage: qr [OPTIONS] [STRING]
 
-USAGE:
-    qr [OPTIONS] [STRING]
+Arguments:
+  [STRING]  String to encode
 
-ARGS:
-    <STRING>    String to encode
-
-OPTIONS:
-    -b, --bg <BG>
-            Foreground color (hex code) [default: #FFF]
-
-    -B, --border <BORDER>
-            Border size (expressed in unit blocks) [default: 1]
-
-        --error-correction-level <ERROR_CORRECTION_LEVEL>
-            QR error orrection level [default: medium] [possible values: low, medium, quartile,
-            high]
-
-    -f, --fg <FG>
-            Background color (hex code) [default: #000]
-
-    -h, --help
-            Print help information
-
-    -o, --output <OUTPUT>
-            Output file (supported file extensions: jpeg, jpg, png, svg); omit to print QR code to
-            console
-
-    -s, --scale <SCALE>
-            Scale factor (raster image output only) [default: 25]
-
-    -V, --version
-            Print version information
+Options:
+  -o, --output <OUTPUT>
+          Output file (supported file extensions: jpeg, jpg, png, svg); omit to print QR code to console
+  -F, --force
+          Force output, i.e. overwrite without user confirmation
+  -f, --fg <FG>
+          Background color (hex code) [default: #000]
+  -b, --bg <BG>
+          Foreground color (hex code) [default: #FFF]
+  -B, --border <BORDER>
+          Border size (expressed in unit blocks) [default: 1]
+  -l, --error-correction-level <ERROR_CORRECTION_LEVEL>
+          QR error orrection level [default: medium] [possible values: low, medium, quartile, high]
+  -s, --scale <SCALE>
+          Scale factor (raster image output only) [default: 25]
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 ```
 
 ## Changelog

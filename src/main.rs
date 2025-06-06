@@ -18,18 +18,17 @@ mod args;
 mod error;
 mod utils;
 
-use args::{Args, Parser};
+use args::Args;
+use clap::{Command, Parser};
+use clap::error::ErrorKind as ClapErrorKind;
 use dialoguer::{theme::ColorfulTheme, Confirm};
 use error::{Error, ErrorKind, Warning};
 use image::{ImageBuffer, RgbImage};
 use qrcodegen::QrCode;
-use std::{
-    fmt::Write as _,
-    fs,
-    io::{self, Read, Write},
-    path::Path,
-    process,
-};
+use std::fmt::Write as _;
+use std::io::{IsTerminal, Read, Write};
+use std::path::Path;
+use std::{fs, io, process};
 use utils::hex_to_rgb;
 
 /// QR code.
@@ -124,12 +123,14 @@ impl QrOutput for Qr {
         let img_size = self.data.size() * scale + (2 * scaled_border);
 
         // Create square image: image needs border on each side of the square.
+        #[allow(clippy::cast_sign_loss)]
         let mut img: RgbImage = ImageBuffer::new(img_size as u32, img_size as u32);
 
         // Write image pixels.
         for y in 0..img_size {
             for x in 0..img_size {
-                let mut pixel = img.get_pixel_mut(x as u32, y as u32);
+                #[allow(clippy::cast_sign_loss)]
+                let pixel = img.get_pixel_mut(x as u32, y as u32);
 
                 if x <= scaled_border || y <= scaled_border {
                     pixel.0 = bg;
@@ -172,10 +173,10 @@ impl QrOutput for Qr {
 fn run(args: Args) -> Result<(), ErrorKind> {
     // If string to encode is not passed in as CLI argument, check stdin for piped string.
     let string = args.string.unwrap_or_else(|| {
-        if atty::is(atty::Stream::Stdin) {
-            clap::Command::new("qr [OPTIONS] [STRING]")
+        if io::stdin().is_terminal() {
+            Command::new("qr [OPTIONS] [STRING]")
                 .error(
-                    clap::ErrorKind::MissingRequiredArgument,
+                    ClapErrorKind::MissingRequiredArgument,
                     "Missing input string.\n\n\
                         \tEither provide it as a CLI argument or pipe it in from standard input.",
                 )
@@ -198,8 +199,9 @@ fn run(args: Args) -> Result<(), ErrorKind> {
         Some(output) => {
             // Check if output file exists and if so ask for overwrite.
             if output.is_file()
+                && !args.force
                 && !Confirm::with_theme(&ColorfulTheme::default())
-                    .with_prompt(format!("Overwrite {:?}?", output))
+                    .with_prompt(format!("Overwrite {}?", output.display()))
                     .interact()
                     .expect("dialog interaction failed")
             {
@@ -217,14 +219,14 @@ fn run(args: Args) -> Result<(), ErrorKind> {
                     }
                 }
                 Some("png" | "jpg" | "jpeg") => {
-                    qr.rst(output, args.scale.unwrap_or(25).into(), &args.bg, &args.fg)?
+                    qr.rst(output, args.scale.unwrap_or(25).into(), &args.bg, &args.fg)?;
                 }
                 _ => return Err(ErrorKind::Error(Error::InvalidOutputExt)),
             }
         }
         // When no output file is specified, print QR code to stdout.
         None => qr.console(),
-    };
+    }
 
     Ok(())
 }
