@@ -16,9 +16,9 @@ include!("src/args.rs");
 
 fn main() {
     // Create man & completions directories.
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("Failed to retrieve manifest dir"));
-    let man_dir = manifest_dir.join("man");
-    let comp_dir = manifest_dir.join("completions");
+    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("Failed to retrieve out dir"));
+    let man_dir = out_dir.join("man");
+    let comp_dir = out_dir.join("completions");
 
     fs::create_dir_all(&man_dir).expect("Failed to create man directory");
     fs::create_dir_all(&comp_dir).expect("Failed to create completions directory");
